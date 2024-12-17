@@ -1,5 +1,3 @@
-# File: gui_manager.py
-
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from crypto_database import CryptoDatabase
@@ -15,7 +13,6 @@ class CryptoDBApp:
         self.create_widgets()
 
     def create_widgets(self):
-        # Buttons for DB operations
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(pady=10)
 
@@ -91,7 +88,6 @@ class CryptoDBApp:
         fields = ["TransactionID", "UserID", "CryptoSymbol", "TransactionType", "Amount", "TransactionDate", "USDValue"]
         record = self.get_user_input("Add/Edit Record", fields)
 
-        # Convert fields to appropriate types
         try:
             record["TransactionID"] = int(record["TransactionID"])
             record["UserID"] = int(record["UserID"])
@@ -150,7 +146,6 @@ class CryptoDBApp:
             messagebox.showinfo("Search Results", "No records found.")
 
     def delete_by_field(self):
-        # Prompt user for field and value
         user_input = self.get_user_input("Delete by Field", ["Field", "Value"])
         field = user_input.get("Field")
         value = user_input.get("Value")

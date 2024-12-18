@@ -7,12 +7,11 @@ class CryptoDBApp:
         self.root = root
         self.root.title("Crypto Database Manager")
 
-        self.db = Database()  # Initialize the database instance
+        self.db = Database()  
 
         self.create_widgets()
 
     def create_widgets(self):
-        # Buttons for database operations
         btn_frame = ttk.Frame(self.root)
         btn_frame.pack(pady=10)
 
@@ -22,6 +21,8 @@ class CryptoDBApp:
         ttk.Button(btn_frame, text="Clear DB", command=self.clear_database).grid(row=0, column=3, padx=5)
         ttk.Button(btn_frame, text="Backup DB", command=self.db.backup_database).grid(row=0, column=4, padx=5)
         ttk.Button(btn_frame, text="Restore DB", command=self.restore_database).grid(row=0, column=5, padx=5)
+        ttk.Button(btn_frame, text="Delete DB", command=self.delete_database).grid(row=0, column=6, padx=5)
+        ttk.Button(btn_frame, text="Exit", command=self.root.quit).grid(row=0, column=7, padx=5)
 
         record_frame = ttk.Frame(self.root)
         record_frame.pack(pady=10)
@@ -32,7 +33,6 @@ class CryptoDBApp:
         ttk.Button(record_frame, text="Edit Record", command=self.edit_record).grid(row=0, column=3, padx=5)
         ttk.Button(record_frame, text="Export to Excel", command=self.export_to_excel).grid(row=0, column=4, padx=5)
 
-        # Treeview for displaying records
         self.tree = ttk.Treeview(
             self.root,
             columns=("TransactionID", "UserID", "CryptoSymbol", "TransactionType", "Amount"),
@@ -109,6 +109,14 @@ class CryptoDBApp:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to restore database: {e}")
 
+    def delete_database(self):
+        """Delete the entire database."""
+        confirm = messagebox.askyesno("Confirm", "Are you sure you want to delete the database?")
+        if confirm:
+            self.db.delete_database()
+            self.refresh_tree()
+            messagebox.showinfo("Success", "Database deleted successfully.")
+
     def add_record(self):
         """Add a new record to the database."""
         fields = ["TransactionID", "UserID", "CryptoSymbol", "TransactionType", "Amount"]
@@ -128,16 +136,30 @@ class CryptoDBApp:
             messagebox.showerror("Error", f"Failed to add record: {e}")
 
     def delete_record(self):
-        """Delete a record by TransactionID."""
+        """Delete a record by a field."""
+        fields = ["TransactionID", "UserID", "CryptoSymbol", "TransactionType", "Amount"]
+        input_data = self.get_user_input("Delete Record", ["Field", "Value"])
+
+        field = input_data["Field"]
+        value = input_data["Value"]
+
+        if field not in fields:
+            messagebox.showerror("Error", "Invalid field.")
+            return
+
         try:
-            transaction_id = int(self.get_user_input("Delete Record", ["TransactionID"])["TransactionID"])
-            self.db.delete_record("TransactionID", transaction_id)
+            if field in ["TransactionID", "UserID"]:
+                value = int(value)
+            elif field == "Amount":
+                value = float(value)
+
+            deleted_count = self.db.delete_record(field, value)
             self.refresh_tree()
-            messagebox.showinfo("Success", "Record deleted successfully.")
+            messagebox.showinfo("Success", f"Deleted {deleted_count} record(s) successfully.")
         except ValueError:
-            messagebox.showerror("Error", "Invalid TransactionID.")
+            messagebox.showerror("Error", "Invalid value.")
         except Exception as e:
-            messagebox.showerror("Error", f"Failed to delete record: {e}")
+            messagebox.showerror("Error", f"Failed to delete record(s): {e}")
 
     def edit_record(self):
         """Edit an existing record."""

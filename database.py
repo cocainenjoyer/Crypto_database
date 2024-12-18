@@ -1,7 +1,7 @@
 import csv
 import os
 from bisect import bisect_left
-from typing import List, Dict, Union, DefaultDict
+from typing import List, Dict, Union
 from collections import defaultdict
 from time import time
 
@@ -73,9 +73,8 @@ class Database:
                 self.indexes[key][record[key]].append(record)
 
     def _find_record_index(self, transaction_id: int) -> int:
-        keys = [record["TransactionID"] for record in self.data]
-        index = bisect_left(keys, transaction_id)
-        if index != len(keys) and keys[index] == transaction_id:
+        index = bisect_left(self.data, {"TransactionID": transaction_id}, key=lambda x: x["TransactionID"])
+        if index != len(self.data) and self.data[index]["TransactionID"] == transaction_id:
             return index
         raise ValueError("TransactionID not found.")
 

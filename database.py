@@ -3,6 +3,7 @@ import os
 from bisect import bisect_left
 from typing import List, Dict, Union, DefaultDict
 from collections import defaultdict
+from time import time
 
 CSV_FILE = "data.csv"
 BACKUP_FILE = "data_backup.csv"
@@ -19,11 +20,25 @@ class Database:
         else:
             self._load_data()
 
+    @staticmethod
+    def _timed_operation(operation_name: str):
+        def wrapper(func):
+            def timed_func(*args, **kwargs):
+                start_time = time()
+                result = func(*args, **kwargs)
+                elapsed_time = time() - start_time
+                print(f"{operation_name} executed in {elapsed_time:.4f} seconds")
+                return result
+            return timed_func
+        return wrapper
+
+    @_timed_operation("Initialize CSV")
     def _initialize_csv(self):
         with open(self.file_path, "w", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=FIELDS)
             writer.writeheader()
 
+    @_timed_operation("Load Data")
     def _load_data(self):
         with open(self.file_path, "r", newline="", encoding="utf-8") as file:
             reader = csv.DictReader(file)
@@ -42,6 +57,7 @@ class Database:
             )
         self._rebuild_indexes()
 
+    @_timed_operation("Save Data")
     def _save_data(self):
         with open(self.file_path, "w", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=FIELDS)
@@ -49,6 +65,7 @@ class Database:
             writer.writerows(self.data)
         self._rebuild_indexes()
 
+    @_timed_operation("Rebuild Indexes")
     def _rebuild_indexes(self):
         self.indexes = {"UserID": defaultdict(list), "CryptoSymbol": defaultdict(list)}
         for record in self.data:
@@ -62,6 +79,7 @@ class Database:
             return index
         raise ValueError("TransactionID not found.")
 
+    @_timed_operation("Create Record")
     def create_record(self, record: Dict[str, Union[int, str, float]]) -> bool:
         if any(r["TransactionID"] == record["TransactionID"] for r in self.data):
             raise ValueError("TransactionID must be unique.")
@@ -70,6 +88,7 @@ class Database:
         self._save_data()
         return True
 
+    @_timed_operation("Delete Record")
     def delete_record(self, key_field: str, value: Union[int, str, float], all_matches: bool = False) -> int:
         if key_field == "TransactionID":
             try:
@@ -87,16 +106,12 @@ class Database:
             self._save_data()
             return len(records_to_delete)
 
-    def search_records(self, key_field: str, value: Union[int, str, float]) -> List[Dict[str, Union[int, str, float]]]:
-        if key_field in self.indexes:
-            return self.indexes[key_field].get(value, [])
-        return [r for r in self.data if r[key_field] == value]
-
-    def update_record(self, transaction_id: int, updates: Dict[str, Union[int, str, float]]) -> bool:
-        index = self._find_record_index(transaction_id)
-        self.data[index].update(updates)
-        self._save_data()
-        return True
+    def delete_database(self):
+        """Deletes the entire database file and clears in-memory data."""
+        if os.path.exists(self.file_path):
+            os.remove(self.file_path)
+        self.data.clear()
+        print("Database deleted successfully.")
 
     def backup_database(self):
         with open(self.file_path, "r", encoding="utf-8") as original:
@@ -110,6 +125,13 @@ class Database:
             with open(self.file_path, "w", encoding="utf-8") as original:
                 original.write(backup.read())
         self._load_data()
+
+    @_timed_operation("Search Records")
+    def search_records(self, key_field: str, value: Union[int, str, float]) -> List[Dict[str, Union[int, str, float]]]:
+        """Search records by a specific field and value."""
+        if key_field in self.indexes:  # Use index if available
+            return self.indexes[key_field].get(value, [])
+        return [record for record in self.data if record.get(key_field) == value]
 
     def import_to_excel(self, excel_file: str):
         try:
